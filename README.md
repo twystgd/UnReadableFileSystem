@@ -1,177 +1,72 @@
 # 💽 URFS — UnReadableFileSystem (v2.0)
 
+## Прочитайте README на русском! [Клик](README_RU.md)
+
 ![Version](https://img.shields.io/badge/version-2.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
 ![Dependencies](https://img.shields.io/badge/dependencies-zero-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-purple.svg)
 
-**URFS (UnReadableFileSystem)** — это компилятор, упаковщик и виртуальная файловая система (VFS), которая преобразует структурированные данные (**JSON**, реляционные базы **SQLite 3**, **SQL-дампы**, таблицы **CSV/TSV** и произвольные бинарные файлы) в единый защищённый образ `.urfs`.
+**URFS (UnReadableFileSystem)** is a compiler, packer, and Virtual File System (VFS) that transforms structured data (**JSON**, **SQLite 3** databases, **SQL dumps**, **CSV/TSV** tables, and raw binaries) into a single, secured `.urfs` image.
 
-Внутри `.urfs` данные хранятся либо в виде сверхкомпактного **нативного битового потока**, либо в виде **текстовых символов `1` и `0`**, где логические сектора, байты или отдельные биты разделяются символом новой строки (`\n`).
-
----
-
-## ✨ Ключевые возможности
-
-* **📦 Мультиформатный VFS-контейнер:** Упаковка сразу нескольких разнородных файлов (`.json`, `.db`, `.sqlite`, `.sql`, `.csv`, `.tsv`) в один монолитный файл `.urfs` с сохранением структуры и метаданных.
-* **🗜️ Экстремальное сжатие (до 21x):** Автоматическая минификация структур данных и словарное сжатие `DEFLATE` (`zlib` уровня 9) сжимают крупные JSON и базы данных более чем на **95%**.
-* **🎛️ 4 режима представления бит:**
-  * `native` *(по умолчанию)* — сырые аппаратные биты с разделением секторов через `\n` (максимальная скорость и минимальный вес).
-  * `block` — текстовые `1` и `0`, где каждая строка — отдельный сектор файловой системы.
-  * `byte` — текстовые `1` и `0`, где каждая строка содержит ровно 8 бит (1 байт).
-  * `bit` — хардкорный режим, где каждый отдельный бит (`1` или `0`) записан на новой строке.
-* **🛡️ Контроль целостности `CRC32`:** Таблица инодов и каждый сектор данных защищены независимыми контрольными суммами `CRC32`. При малейшем повреждении битов распаковщик укажет точное место ошибки.
-* **🪟 Интеграция с Windows Explorer:** Встроенные команды `register` / `unregister` прописывают формат `.urfs` в реестре Windows как системный тип **`UnReadableFileSystem`**, назначают иконку образа диска и позволяют распаковывать архивы двойным кликом мыши[cite: 1].
-* **⚡ Zero Dependencies:** Написан на чистом стандартном стеке Python — не требует установки сторонних библиотек через `pip` и компилируется в один автономный `urfs.exe`.
+Inside a `.urfs` file, data is stored either as an ultra-compact **native bitstream** or as **textual `1` and `0` characters**, where logical sectors, bytes, or individual bits are strictly separated by a newline character (`\n`).
 
 ---
 
-## 📊 Сравнение размера: JSON / БД против `.urfs`
+## ✨ Key Features
 
-Реальные тесты показывают, насколько эффективно нативный режим `.urfs` со сжатием (`-z`) борется с избыточностью текстовых форматов[cite: 1]:
+* **📦 Multi-Format VFS Container:** Pack multiple heterogeneous files (`.json`, `.db`, `.sqlite`, `.sql`, `.csv`, `.tsv`) into a single monolithic `.urfs` file while preserving structure and metadata.
+* **🗜️ Extreme Compression (up to 21x):** Automatic data structure minification combined with dictionary-based `DEFLATE` compression (zlib level 9) shrinks large JSONs and databases by over **95%**.
+* **🎛️ 4 Bit-Representation Modes:**
+  * `native` *(default)* — raw hardware bits with sectors separated by `\n` (maximum speed and minimum file size).
+  * `block` — textual `1` and `0` characters, where each line represents a distinct VFS sector.
+  * `byte` — textual `1` and `0` characters, where each line contains exactly 8 bits (1 byte).
+  * `bit` — hardcore mode, where every single bit (`1` or `0`) is written on a new line.
+* **🛡️ CRC32 Integrity Control:** The inode directory and every data sector are protected by independent `CRC32` checksums. If a single bit is corrupted, the unpacker will pinpoint the exact location of the error.
+* **🪟 Windows Explorer Integration:** Built-in `register` / `unregister` commands add the `.urfs` format to the Windows Registry as a native **`UnReadableFileSystem`** type, apply a custom disk image icon, and enable double-click extraction.
+* **⚡ Zero Dependencies:** Written in pure standard Python. No external `pip` libraries required. Can be compiled into a standalone `urfs.exe`.
 
-| Тестовый файл | Описание данных | Исходный размер | Размер в `.urfs` (`native -z`) | Разница / Экономия |
+---
+
+## 📊 Size Comparison: JSON / DB vs `.urfs`
+
+Real-world benchmarks demonstrating the efficiency of the `native` mode with compression (`-z`) compared to raw text formats:
+
+| Test File | Data Description | Original Size | `.urfs` Size (`native -z`) | Difference / Savings |
 | :--- | :--- | :--- | :--- | :--- |
-| **`example.json`** | Конфигурационный JSON-файл | `219 Б` | **`171 Б`** | **-21.9%** *(включая заголовки ФС и CRC32)* |
-| **`huge_users.json`** | 5 000 профилей пользователей (135 000 строк) | `2 832 КБ` (~2.83 МБ)[cite: 1] | **`134 КБ`** (`huge_users.urfs`)[cite: 1] | **Сжатие в 21.1 раза (-95.3% веса)**[cite: 1] |
+| **`example.json`** | Configuration JSON file | `219 B` | **`171 B`** | **-21.9%** *(including VFS headers & CRC32)* |
+| **`huge_users.json`** | 5,000 user profiles (135,000 lines) | `2,832 KB` (~2.83 MB) | **`134 KB`** | **Compressed 21.1x (-95.3% of original size)** |
 
-### Сравнение всех режимов компиляции URFS (на примере файла в 1 КиБ)
+### Comparing URFS Compilation Modes (Based on a 1 KiB file)
 
-| Формат / Режим | Как хранятся данные внутри `.urfs` | Читаемость человеком | Итоговый размер (`-z`) |
+| Format / Mode | How Data is Stored in `.urfs` | Human Readability | Final Size (`-z`) |
 | :--- | :--- | :--- | :--- |
-| **Исходный `.json`** | Текст UTF-8 с отступами и переносами строк | Читаемый текст | `100%` (базовый) |
-| **`.urfs -m native -z`** | Сырые биты + разделители секторов `\n` (`0x0A`) | Нечитаемый бинарный код | **`~5% – 35%`** *(в 3–21 раз меньше)*[cite: 1] |
-| **`.urfs -m block -z`** | Символы `'0'` и `'1'` (1 строка = 1 сектор) | Только нули и единицы | `~250% – 350%` |
-| **`.urfs -m byte -z`** | Символы `'0'` и `'1'` (1 строка = 8 бит) | Столбец по 8 бит | `~280% – 400%` |
-| **`.urfs -m bit -z`** | Символы `'0'` и `'1'` (1 строка = 1 бит) | Вертикальная лента из 0 и 1 | `~500% – 800%` |
+| **Source `.json`** | UTF-8 text with spaces and line breaks | Human-readable text | `100%` (Baseline) |
+| **`.urfs -m native -z`** | Raw bits + `\n` (`0x0A`) sector separators | Unreadable binary gibberish | **`~5% – 35%`** *(3x to 21x smaller)* |
+| **`.urfs -m block -z`** | `'0'` and `'1'` characters (1 line = 1 sector) | Only zeros and ones | `~250% – 350%` |
+| **`.urfs -m byte -z`** | `'0'` and `'1'` characters (1 line = 8 bits) | 8-bit vertical column | `~280% – 400%` |
+| **`.urfs -m bit -z`** | `'0'` and `'1'` characters (1 line = 1 bit) | Vertical tape of 0s and 1s | `~500% – 800%` |
 
 ---
 
-## 🧬 Архитектура контейнера `.urfs` (v2)
+## 🧬 `.urfs` Container Architecture (v2)
 
-Каждый файл `.urfs` представляет собой линейный образ виртуальной файловой системы, разбитый на сектора переводом строки `\n`:
+Every `.urfs` file is a linear virtual file system image separated into sectors by the newline character `\n`:
 
 ```text
 +-----------------------------------------------------------------------+
-| СЕКТОР 1: СУПЕРБЛОК (8 байт / 64 бита)                                |
+| SECTOR 1: SUPERBLOCK (8 bytes / 64 bits)                              |
 | [MAGIC: "URFS" (4B)] [VERSION: 2 (1B)] [FLAGS (1B)] [INODES_CNT (2B)] |
 +-----------------------------------------------------------------------+
                                    \n
 +-----------------------------------------------------------------------+
-| СЕКТОР 2: ТАБЛИЦА ИНОДОВ (Inode Directory)                            |
+| SECTOR 2: INODE DIRECTORY                                             |
 | [LENGTH (4B)] [CRC32 (4B)] [ZLIB(JSON: [{"i":0,"n":"...","t":"..."}])]|
 +-----------------------------------------------------------------------+
                                    \n
 +-----------------------------------------------------------------------+
-| СЕКТОР 3..N: БЛОКИ ДАННЫХ (Data Blocks)                               |
-| [LENGTH (4B)] [CRC32 (4B)] [ZLIB(Сериализованная БД / Таблица / JSON)]|
+| SECTOR 3..N: DATA BLOCKS                                              |
+| [LENGTH (4B)] [CRC32 (4B)] [ZLIB(Serialized DB / Table / JSON)]       |
 +-----------------------------------------------------------------------+
                                    \n
-```
-
-### Как обрабатываются разные источники данных:
-1. **`.json` (инод `json`):** Парсится, проверяется на валидность, очищается от пробельных символов и сжимается в поток. При распаковке форматируется с `indent=2`.
-2. **`.db`, `.sqlite`, `.sqlite3` (инод `sqlite_db`):** Извлекаются все `CREATE TABLE` схемы из `sqlite_master` и записи всех таблиц. При распаковке база данных побитово пересобирается в рабочий файл SQLite.
-3. **`.sql` (инод `sql_dump`):** SQL-скрипт исполняется в изолированной `in-memory` базе (`:memory:`), верифицируется и сохраняется как полноценная реляционная структура.
-4. **`.csv`, `.tsv` (инод `csv_table`):** Извлекаются заголовки колонок и строки таблицы.
-5. **Любые другие файлы (инод `raw_blob`):** Сохраняются как бинарный слепок без потери данных.
-
----
-
-## 🚀 Установка и сборка
-
-### Вариант 1: Готовый `urfs.exe` (Windows)
-Скачайте последний собранный `urfs.exe` из раздела **[Releases](../../releases)** — установка Python не требуется.
-
-### Вариант 2: Запуск из исходного кода (Python 3.8+)
-Скрипт не требует внешних библиотек:
-```bash
-git clone [https://github.com/YOUR_USERNAME/UnReadableFileSystem.git](https://github.com/YOUR_USERNAME/UnReadableFileSystem.git)
-cd UnReadableFileSystem
-python urfs.py --help
-```
-
-### Вариант 3: Самостоятельная компиляция в `.exe`
-Для сборки в один автономный исполняемый файл используется `PyInstaller`:
-```powershell
-pip install pyinstaller
-pyinstaller --onefile --name urfs urfs.py
-```
-Готовый бинарник появится по пути `dist/urfs.exe`.
-
----
-
-## 💻 Примеры использования (CLI)
-
-### 1. Упаковка файлов (`pack`)
-
-**Нативная упаковка со сжатием (рекомендуется для минимального веса):**
-```powershell
-urfs pack data.json -o data.urfs -z
-```
-
-**Упаковка сразу нескольких баз данных, дампов и таблиц в один образ `.urfs`:**
-```powershell
-urfs pack config.json users.db dump.sql stats.csv -o backup.urfs -z
-```
-
-**Классический режим из текстовых `0` и `1` (1 строка = 1 сектор ФС):**
-```powershell
-urfs pack secret.json -o readable_bits.urfs -m block
-```
-
-**Экстремальный режим (каждый `1` и `0` на отдельной строке):**
-```powershell
-urfs pack secret.json -o matrix.urfs -m bit -z
-```
-
----
-
-### 2. Распаковка образа (`unpack`)
-
-Декомпилятор автоматически определяет режим файла (`native`, `block`, `byte` или `bit`), проверяет контрольные суммы `CRC32` и восстанавливает исходные файлы и базы данных:
-
-```powershell
-urfs unpack backup.urfs -d ./restored_data
-```
-
----
-
-### 3. Интеграция с Проводником Windows (`register` / `unregister`)
-
-Вы можете зарегистрировать расширение `.urfs` в реестре Windows (не требует прав администратора):
-
-```powershell
-urfs register
-```
-После выполнения команды:
-* В Проводнике Windows у всех файлов `.urfs` появится тип **`UnReadableFileSystem`** и системная иконка образа диска[cite: 1].
-* **Двойной клик** (или пункт контекстного меню **«Распаковать UnReadableFileSystem»**) автоматически проверит `CRC32` и распакует содержимое в папку `<имя_файла>.urfs_extracted` рядом с архивом.
-
-Чтобы удалить ассоциацию из реестра Windows:
-```powershell
-urfs unregister
-```
-
----
-
-## 🛠️ Полная справка по флагам
-
-| Команда / Флаг | Описание |
-| :--- | :--- |
-| `pack <файлы...>` | Упаковать один или несколько файлов/БД в образ `.urfs` |
-| `-o, --output <путь>` | Путь к создаваемому файлу `.urfs` |
-| `-m, --mode <режим>` | Режим разделения строками: `native` *(по умолчанию)*, `block`, `byte`, `bit` |
-| `-z, --compress` | Сжать таблицу инодов и блоки данных алгоритмом `zlib` (уровень 9) |
-| `unpack <файл.urfs>` | Проверить `CRC32` и распаковать образ `.urfs` обратно в файлы и БД |
-| `-d, --dir <папка>` | Целевая папка для распаковки *(по умолчанию: `./urfs_extracted`)* |
-| `register` | Зарегистрировать `.urfs` как `UnReadableFileSystem` в реестре Windows[cite: 1] |
-| `unregister` | Удалить привязку `.urfs` из реестра Windows |
-
----
-
-## 🔒 Защита от повреждений
-
-* **Автокоррекция переводов строк (`CRLF` / `LF`):** Распаковщик корректно обрабатывает как стандартные `\n`, так и `\r\n`.
-* **Детектор порчи текстовыми редакторами:** Если нативный бинарный `.urfs` был случайно открыт и пересохранён в Блокноте с потерей непечатных байт (замена на UTF-8 `EF BF BD`), анализатор определит причину повреждения и выведет точное диагностическое сообщение.
